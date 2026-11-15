@@ -19,5 +19,4 @@ jobs:
       - run: |
           pip install -q --extra-index-url https://download.pytorch.org/whl/cpu "jax[cpu]" tensorflow-cpu torch numpy scipy
           if [ "${{ matrix.src }}" = pypi ]; then pip install -q -U keras; else pip install -q -U "keras @ git+https://github.com/keras-team/keras"; fi
-      - run: python probe_ops.py 2>&1 | grep -v "^WARNING\|^I0000\|oneDNN\|cuda\|TF-TRT\|rebuild TensorFlow\|AVX" || true
-      - run: python probe_misc.py 2>&1 | grep -v "^WARNING\|^I0000\|oneDNN\|cuda\|TF-TRT\|rebuild TensorFlow\|AVX" || true
+      - run: python probe_argp.py 2>&1 | grep -v "^WARNING\|^I0000\|oneDNN\|cuda\|TF-TRT\|rebuild TensorFlow\|AVX" || true
