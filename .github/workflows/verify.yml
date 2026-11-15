@@ -1,0 +1,51 @@
+name: verify-argpartition
+on:
+  push:
+    branches: [ci/argpartition-float]
+permissions:
+  contents: read
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [tensorflow, jax, torch, numpy]
+        variant: [baseline, fixed]
+    name: ${{ matrix.backend }} ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.11-slim
+    env:
+      KERAS_HOME: .github/workflows/config/${{ matrix.backend }}
+    steps:
+      - run: |
+          apt-get update && apt-get -y install build-essential git
+          git config --global --add safe.directory '*'
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+      - name: Restore CI config dirs and (baseline) unfixed backend sources
+        run: |
+          git checkout ff5653da01a3e77edf5a5c9c41e6c6faccf0230e~1 -- .github/workflows/config
+          if [ "${{ matrix.variant }}" = baseline ]; then
+            git checkout ff5653da01a3e77edf5a5c9c41e6c6faccf0230e~1 -- keras/src/backend/tensorflow/ops/numpy.py keras/src/backend/torch/ops/numpy.py
+          fi
+          git status --short
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install --no-deps tf_keras
+          pip uninstall -y keras
+      - name: argpartition tests
+        run: pytest keras/src/ops/numpy_test.py -k argpartition -v -p no:cacheprovider || true
+      - name: Full numpy_test.py
+        run: pytest keras/src/ops/numpy_test.py -n 4 -q -p no:cacheprovider 2>&1 | tail -40
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt --upgrade
+      - run: pre-commit run --all-files --hook-stage manual
