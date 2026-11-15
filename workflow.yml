@@ -1,0 +1,23 @@
+name: probe
+on:
+  push:
+    branches: [ci/probe]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [jax, tensorflow, torch, numpy]
+        src: [pypi, main]
+    env:
+      KERAS_BACKEND: ${{ matrix.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: |
+          pip install -q --extra-index-url https://download.pytorch.org/whl/cpu "jax[cpu]" tensorflow-cpu torch numpy scipy
+          if [ "${{ matrix.src }}" = pypi ]; then pip install -q -U keras; else pip install -q -U "keras @ git+https://github.com/keras-team/keras"; fi
+      - run: python probe_ops.py 2>&1 | grep -v "^WARNING\|^I0000\|oneDNN\|cuda\|TF-TRT\|rebuild TensorFlow\|AVX" || true
+      - run: python probe_misc.py 2>&1 | grep -v "^WARNING\|^I0000\|oneDNN\|cuda\|TF-TRT\|rebuild TensorFlow\|AVX" || true
